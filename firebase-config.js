@@ -1,4 +1,4 @@
-// Your Firebase config
+// Firebase configuration for your project
 const firebaseConfig = {
   apiKey: "AIzaSyAY7hSDaaBh71z3k2PXj3s93uxk3AF3Mvs",
   authDomain: "mini-skribbl.firebaseapp.com",
@@ -9,8 +9,8 @@ const firebaseConfig = {
   appId: "1:423970942237:web:ac3853dab889c0fe3305f4"
 };
 
-// Initialize Firebase
+// Initialize Firebase (compat version)
 firebase.initializeApp(firebaseConfig);
 
-// Get reference to the Realtime Database
+// Get reference to Realtime Database
 const database = firebase.database();
