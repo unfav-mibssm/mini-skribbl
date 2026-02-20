@@ -2,15 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Mini Skribbl.io</title>
+
+  <!-- IMPORTANT FOR MOBILE -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <title>Mini Skribbl</title>
+
   <link rel="stylesheet" href="style.css">
-  <!-- Firebase SDKs -->
+
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <script src="firebase-config.js"></script>
   <script defer src="game.js"></script>
 </head>
+
 <body>
+
   <div id="room-selection">
     <input type="text" id="player-name" placeholder="Your Name">
     <input type="text" id="room-id" placeholder="Room ID">
@@ -18,13 +26,16 @@
   </div>
 
   <div id="game-area" style="display:none;">
-    <canvas id="drawing-canvas" width="600" height="400"></canvas>
+    <canvas id="drawing-canvas"></canvas>
+
     <div id="chat-area">
       <div id="messages"></div>
-      <input type="text" id="chat-input" placeholder="Type a guess...">
-      <button id="send-chat">Send</button>
+      <div id="chat-controls">
+        <input type="text" id="chat-input" placeholder="Type a guess...">
+        <button id="send-chat">Send</button>
+      </div>
     </div>
-    <div id="players-list"></div>
   </div>
+
 </body>
 </html>
