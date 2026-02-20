@@ -1,41 +1,253 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Premium Drawing App</title>
 
-  <!-- IMPORTANT FOR MOBILE -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  -webkit-tap-highlight-color: transparent;
+}
 
-  <title>Mini Skribbl</title>
+body{
+  overflow:hidden;
+  background:#1e1e1e;
+  font-family:sans-serif;
+  touch-action:none;
+}
 
-  <link rel="stylesheet" href="style.css">
+canvas{
+  position:absolute;
+  top:60px;
+  left:0;
+  background:white;
+}
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="firebase-config.js"></script>
-  <script defer src="game.js"></script>
+.toolbar{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:60px;
+  background:#2b2b2b;
+  display:flex;
+  align-items:center;
+  padding:5px;
+  gap:5px;
+  overflow-x:auto;
+}
+
+.toolbar input[type=color]{
+  width:40px;
+  height:40px;
+  border:none;
+}
+
+.toolbar input[type=range]{
+  width:100px;
+}
+
+button{
+  background:#444;
+  color:white;
+  border:none;
+  padding:8px 10px;
+  border-radius:8px;
+  font-size:14px;
+}
+
+button:active{
+  background:#666;
+}
+
+.textBox{
+  position:fixed;
+  bottom:70px;
+  left:50%;
+  transform:translateX(-50%);
+  display:flex;
+  gap:5px;
+}
+
+.textBox input{
+  padding:8px;
+  font-size:16px;
+  border-radius:8px;
+  border:none;
+}
+
+.textBox button{
+  background:#0099ff;
+}
+
+</style>
 </head>
 
 <body>
 
-  <div id="room-selection">
-    <input type="text" id="player-name" placeholder="Your Name">
-    <input type="text" id="room-id" placeholder="Room ID">
-    <button id="join-room">Join Room</button>
-  </div>
+<div class="toolbar">
+  <input type="color" id="colorPicker">
+  <input type="range" id="brushSize" min="1" max="50" value="5">
+  <button onclick="setMode('brush')">Brush</button>
+  <button onclick="setMode('eraser')">Eraser</button>
+  <button onclick="setMode('fill')">Bucket</button>
+  <button onclick="clearCanvas()">Clear</button>
+</div>
 
-  <div id="game-area" style="display:none;">
-    <canvas id="drawing-canvas"></canvas>
+<canvas id="canvas"></canvas>
 
-    <div id="chat-area">
-      <div id="messages"></div>
-      <div id="chat-controls">
-        <input type="text" id="chat-input" placeholder="Type a guess...">
-        <button id="send-chat">Send</button>
-      </div>
-    </div>
-  </div>
+<div class="textBox">
+  <input type="text" id="textInput" placeholder="Type text...">
+  <button onclick="addText()">Add</button>
+</div>
 
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight - 60;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+let painting = false;
+let mode = "brush";
+
+function setMode(m){
+  mode = m;
+}
+
+canvas.addEventListener("touchstart", start);
+canvas.addEventListener("touchmove", draw);
+canvas.addEventListener("touchend", stop);
+
+canvas.addEventListener("mousedown", start);
+canvas.addEventListener("mousemove", draw);
+canvas.addEventListener("mouseup", stop);
+
+function getXY(e){
+  let rect = canvas.getBoundingClientRect();
+  if(e.touches){
+    return {
+      x: e.touches[0].clientX - rect.left,
+      y: e.touches[0].clientY - rect.top
+    }
+  } else {
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    }
+  }
+}
+
+function start(e){
+  if(mode === "fill"){
+    bucketFill(e);
+    return;
+  }
+  painting = true;
+  draw(e);
+}
+
+function stop(){
+  painting = false;
+  ctx.beginPath();
+}
+
+function draw(e){
+  if(!painting) return;
+
+  let pos = getXY(e);
+
+  ctx.lineWidth = document.getElementById("brushSize").value;
+  ctx.lineCap = "round";
+
+  if(mode === "eraser"){
+    ctx.globalCompositeOperation = "destination-out";
+  } else {
+    ctx.globalCompositeOperation = "source-over";
+    ctx.strokeStyle = document.getElementById("colorPicker").value;
+  }
+
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+}
+
+function clearCanvas(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+function addText(){
+  const text = document.getElementById("textInput").value;
+  if(!text) return;
+
+  ctx.fillStyle = document.getElementById("colorPicker").value;
+  ctx.font = "30px Arial";
+  ctx.fillText(text, canvas.width/2 - 50, canvas.height/2);
+  document.getElementById("textInput").value = "";
+}
+
+/* SIMPLE BUCKET FILL */
+function bucketFill(e){
+  let pos = getXY(e);
+  let imageData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  let data = imageData.data;
+
+  let targetColor = getPixel(data, pos.x, pos.y);
+  let fillColor = hexToRgb(document.getElementById("colorPicker").value);
+
+  floodFill(data, pos.x, pos.y, targetColor, fillColor);
+
+  ctx.putImageData(imageData,0,0);
+}
+
+function getPixel(data,x,y){
+  let index = (y * canvas.width + x) * 4;
+  return data.slice(index,index+4);
+}
+
+function floodFill(data,x,y,target,fill){
+  let stack=[[x,y]];
+  while(stack.length){
+    let [cx,cy]=stack.pop();
+    let index=(cy*canvas.width+cx)*4;
+    if(matchColor(data,index,target)){
+      data[index]=fill.r;
+      data[index+1]=fill.g;
+      data[index+2]=fill.b;
+      data[index+3]=255;
+
+      stack.push([cx+1,cy]);
+      stack.push([cx-1,cy]);
+      stack.push([cx,cy+1]);
+      stack.push([cx,cy-1]);
+    }
+  }
+}
+
+function matchColor(data,index,target){
+  return data[index]===target[0] &&
+         data[index+1]===target[1] &&
+         data[index+2]===target[2] &&
+         data[index+3]===target[3];
+}
+
+function hexToRgb(hex){
+  let bigint = parseInt(hex.slice(1),16);
+  return {
+    r:(bigint>>16)&255,
+    g:(bigint>>8)&255,
+    b:bigint&255
+  }
+}
+
+</script>
 </body>
 </html>
